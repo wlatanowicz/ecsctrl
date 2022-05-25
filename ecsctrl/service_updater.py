@@ -94,7 +94,7 @@ class WaitForUpdate:
 
             sleep(60)  # @TODO get from cli arguments
 
-    def check_single_service(self, cluster_name, service_description):
+    def check_single_service(self, service_description):
         failures = 0
 
         cluster_name = service_description["clusterName"]
@@ -162,8 +162,10 @@ class WaitForUpdate:
             print("\t😀 Primary deployment completed.")
         elif primary_deployment["rolloutState"] == "IN_PROGRESS":
             print("\t🧑‍🔧 Primary deployment is still in progress.")
+            failures += 1
         elif primary_deployment["rolloutState"] == "FAILED":
-            print("\t💀 Oh no! Primary deployment failed. Exiting.")
+            print("\t💀 Oh no! Primary deployment failed.")
+            failures += 1
             return failures, True
 
         if not failures:
