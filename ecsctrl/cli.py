@@ -57,10 +57,10 @@ def register(
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     task_family = spec.get("family", "N/A")
-    print(f"🗂 Registering task definition {task_family}.")
+    click.echo(f"🗂 Registering task definition {task_family}.")
     response = ctx.obj["boto_client"].call("register_task_definition", **spec)
     task_definition_arn = response["taskDefinition"]["taskDefinitionArn"]
-    print(f"\t✅ done, task definition arn: {task_definition_arn}.")
+    click.echo(f"\t✅ done, task definition arn: {task_definition_arn}.")
 
     if update_services_in_cluster:
         updated_services = {}
@@ -96,9 +96,9 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("name", "N/A")
-    print(f"🏸 Creating service {service_name}.")
+    click.echo(f"🏸 Creating service {service_name}.")
     ctx.obj["boto_client"].call("create_service", **spec)
-    print("\t✅ done.")
+    click.echo("\t✅ done.")
 
 
 # fmt: off
@@ -114,9 +114,9 @@ def update(ctx, spec_file, env_file, json_file, var, sys_env):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
-    print(f"🏸 Updating service {service_name}.")
+    click.echo(f"🏸 Updating service {service_name}.")
     ctx.obj["boto_client"].call("update_service", **spec)
-    print("\t✅ done.")
+    click.echo("\t✅ done.")
 
 
 @cli.group(name="secrets")
@@ -145,6 +145,6 @@ def store(ctx, spec_file, env_file, json_file, var, sys_env):
             "Value": value,
             "Type": "SecureString",
         }
-        print(f"🔑 Storing secret {secret_name}.")
+        click.echo(f"🔑 Storing secret {secret_name}.")
         response = ssm.call("put_parameter", **ssm_params)
-        print(f"\t✅ done, parameter version: {response['Version']}")
+        click.echo(f"\t✅ done, parameter version: {response['Version']}")

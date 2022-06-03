@@ -1,5 +1,6 @@
 import boto3
 import json
+import click
 
 
 class BotoClient:
@@ -13,7 +14,7 @@ class BotoClient:
             return getattr(self.client, method)(*args, **kwargs)
         else:
             json_spec = json.dumps(kwargs, indent=2)
-            print(f"🧸 BOTO: Would call `{self.service}:{method}` with {json_spec}")
+            click.echo(f"🧸 BOTO: Would call `{self.service}:{method}` with {json_spec}")
             return self._dry_run_mocked_response(method, *args, **kwargs)
 
     def _dry_run_mocked_response(self, method, *args, **kwargs):

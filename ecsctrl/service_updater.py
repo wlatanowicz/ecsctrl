@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import sys
 import math
 import os
+import click
 
 
 class ServiceUpdater:
@@ -21,9 +22,9 @@ class ServiceUpdater:
     def update(self) -> List[str]:
         services = self.find_services_to_update()
         for service_arn, service_name in services:
-            print(f"🏗 Updating service {service_name}.")
+            click.echo(f"🏗 Updating service {service_name}.")
             self.update_service(service_arn)
-            print("\t✅ done.")
+            click.echo("\t✅ done.")
         return services
 
     def find_services_to_update(self) -> List[str]:
@@ -101,18 +102,18 @@ class WaitForUpdate:
                 sleep(0.2)
 
             if critical:
-                print("💀 Oh no! Deployment failed. Exiting.")
+                click.echo("💀 Oh no! Deployment failed. Exiting.")
                 sys.exit(1)
 
             if total_failures == 0:
-                print("🍾 All done.")
+                click.echo("🍾 All done.")
                 return
             else:
                 if time() > deadline:
-                    print("💀 Oh no! Timeout reached. Exiting.")
+                    click.echo("💀 Oh no! Timeout reached. Exiting.")
                     sys.exit(1)
                 else:
-                    print(
+                    click.echo(
                         f"⏳ Waiting for things to settle ({total_failures} check/s/ failed)"
                     )
 
@@ -130,8 +131,8 @@ class WaitForUpdate:
 
                     time_passed = math.floor(time() - start_time)
                     resumed_after = math.floor(time() - pause_time)
-                    print("")
-                    print(
+                    click.echo("")
+                    click.echo(
                         f"🚀 Resuming after {resumed_after}s ({time_passed}s passed from the beginning) "
                     )
 
@@ -150,25 +151,25 @@ class WaitForUpdate:
         deployments = service_description["deployments"]
         primary_deployment = [d for d in deployments if d["status"] == "PRIMARY"][0]
 
-        print("🔍 Running checks")
-        print(f"🌎 Cluster: {cluster_name}")
-        print(f"🏓 Service: {service_name}")
+        click.echo("🔍 Running checks")
+        click.echo(f"🌎 Cluster: {cluster_name}")
+        click.echo(f"🏓 Service: {service_name}")
 
-        print(f"\t👮‍♀️ Desired task count: {service_task_desired_count}")
+        click.echo(f"\t👮‍♀️ Desired task count: {service_task_desired_count}")
 
         if service_task_desired_count == service_task_running_count:
-            print(f"\t😀 Running task count: {service_task_running_count}")
+            click.echo(f"\t😀 Running task count: {service_task_running_count}")
         else:
-            print(f"\t😱 Running task count: {service_task_running_count}")
+            click.echo(f"\t😱 Running task count: {service_task_running_count}")
             failures += 1
 
         if service_task_pending_count == 0:
-            print(f"\t😀 Pending task count: {service_task_pending_count}")
+            click.echo(f"\t😀 Pending task count: {service_task_pending_count}")
         else:
-            print(f"\t😱 Pending task count: {service_task_pending_count}")
+            click.echo(f"\t😱 Pending task count: {service_task_pending_count}")
             failures += 1
 
-        print(f"\t👮🏽‍♂️ Desired task definition: {service_task_definition}")
+        click.echo(f"\t👮🏽‍♂️ Desired task definition: {service_task_definition}")
 
         task_arns = self.boto_client.call(
             "list_tasks", serviceName=service_name, cluster=cluster_name
@@ -186,29 +187,31 @@ class WaitForUpdate:
             task_task_definition = task["taskDefinitionArn"]
 
             if task_age >= min_task_age:
-                print(f"\t😀 Task {task_arn} age is OK")
+                click.echo(f"\t😀 Task {task_arn} age is OK")
             else:
-                print(
+                click.echo(
                     f"\t😱 Task {task_arn} is to young ({task_age}s, {min_task_age}s minimum)"
                 )
                 failures += 1
 
             if task_task_definition == service_task_definition:
-                print(f"\t😀 Task {task_arn} task definition is OK")
+                click.echo(f"\t😀 Task {task_arn} task definition is OK")
             else:
-                print(f"\t😱 Task {task_arn} task definition is {task_task_definition}")
+                click.echo(
+                    f"\t😱 Task {task_arn} task definition is {task_task_definition}"
+                )
                 failures += 1
 
         if primary_deployment["rolloutState"] == "COMPLETED":
-            print("\t😀 Primary deployment completed.")
+            click.echo("\t😀 Primary deployment completed.")
         elif primary_deployment["rolloutState"] == "IN_PROGRESS":
-            print("\t🧑‍🔧 Primary deployment is still in progress.")
+            click.echo("\t🧑‍🔧 Primary deployment is still in progress.")
         elif primary_deployment["rolloutState"] == "FAILED":
-            print("\t💀 Oh no! Primary deployment failed.")
+            click.echo("\t💀 Oh no! Primary deployment failed.")
             failures += 1
             return failures, True
 
         if not failures:
-            print("\t✅ Service updated successfully.")
+            click.echo("\t✅ Service updated successfully.")
 
         return failures, False
