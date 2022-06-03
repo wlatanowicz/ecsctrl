@@ -1,7 +1,10 @@
 import re
-from time import sleep
+from time import sleep, time
 from typing import Dict, List
 from datetime import datetime, timezone
+import sys
+import math
+import os
 
 
 class ServiceUpdater:
@@ -82,6 +85,11 @@ class WaitForUpdate:
     def wait_for_all(self):
         total_failures = 1
         total_critical = False
+        timeout = 600
+        wait_time = 60
+        deadline = time() + timeout
+        start_time = time()
+
         while total_failures and not total_critical:
             total_failures = 0
             total_critical = False
@@ -90,9 +98,42 @@ class WaitForUpdate:
                 failures, critical = self.check_single_service(service)
                 total_failures += failures
                 total_critical = total_critical or critical
-                sleep(1)  # @TODO get from cli arguments
+                sleep(0.2)
 
-            sleep(60)  # @TODO get from cli arguments
+            if critical:
+                print("💀 Oh no! Deployment failed. Exiting.")
+                sys.exit(1)
+
+            if total_failures == 0:
+                print("🍾 All done.")
+                return
+            else:
+                if time() > deadline:
+                    print("💀 Oh no! Timeout reached. Exiting.")
+                    sys.exit(1)
+                else:
+                    print(
+                        f"⏳ Waiting for things to settle ({total_failures} check/s/ failed)"
+                    )
+
+                    pause_time = time()
+                    if not os.environ.get("CI"):
+                        animation = "🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛"
+                        for i in range(wait_time * 10):
+                            sys.stdout.write("\r" + animation[i % len(animation)])
+                            sys.stdout.flush()
+                            sleep(0.1)
+                        sys.stdout.write("\r")
+                        sys.stdout.flush()
+                    else:
+                        sleep(wait_time)
+
+                    time_passed = math.floor(time() - start_time)
+                    resumed_after = math.floor(time() - pause_time)
+                    print("")
+                    print(
+                        f"🚀 Resuming after {resumed_after}s ({time_passed}s passed from the beginning) "
+                    )
 
     def check_single_service(self, service_description):
         failures = 0
@@ -162,7 +203,6 @@ class WaitForUpdate:
             print("\t😀 Primary deployment completed.")
         elif primary_deployment["rolloutState"] == "IN_PROGRESS":
             print("\t🧑‍🔧 Primary deployment is still in progress.")
-            failures += 1
         elif primary_deployment["rolloutState"] == "FAILED":
             print("\t💀 Oh no! Primary deployment failed.")
             failures += 1
