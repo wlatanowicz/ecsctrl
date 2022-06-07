@@ -17,7 +17,7 @@ Jinja templates are fed with values from multiple sources given as command argum
 1. env files with key-value pairs ie. `-e production.env` or `--env-file=staging.env`
 2. json files ie. `-j terraform-output.json` or `--env-file=infrastructure.json`
 3. key-value pairs provided as command arguments ie. `-v env_name=jupiter` or `--var instance_type=small`
-4. system environment - turned on with `--sys-env` option; off by default
+4. system environment - turned on/off with `--sys-env`/`--no-sys-env` option; off by default
 
 Authentication
 ---
@@ -82,6 +82,10 @@ containerDefinitions:
 ```bash
 ecsctrl task-definition register -e production.env task-definition.yaml
 ```
+
+Additionally you can use following options:
+- `-c <cluster-name>` / `--update-services-in-cluster=<cluster-name>` - updates all existing services which uses previous version of task definition (task definition family must match) in given cluster. Can be added multiple times for multiple clusters
+- `-w` / `--wait-for-update` - wait for update of services to finish. Command will fail if at least one of services will fail to update.
 
 Create new ECS service
 ---
