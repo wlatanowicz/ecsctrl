@@ -99,7 +99,7 @@ def service(ctx):
 def create(ctx, spec_file, env_file, json_file, var, sys_env):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
-    service_name = spec.get("name", "N/A")
+    service_name = spec.get("serviceName", "N/A")
     click.echo(f"🏸 Creating service {service_name}.")
     ctx.obj["boto_client"].call("create_service", **spec)
     click.echo("\t✅ done.")
