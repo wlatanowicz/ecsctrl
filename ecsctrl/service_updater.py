@@ -101,7 +101,7 @@ class WaitForUpdate:
                 total_critical = total_critical or critical
                 sleep(0.2)
 
-            if critical:
+            if total_critical:
                 click.echo("💀 Oh no! Deployment failed. Exiting.")
                 sys.exit(1)
 
