@@ -21,10 +21,14 @@ def check_var(ctx, param, value):
 
 
 @click.group()
+@click.option(
+    "--dry-run", is_flag=True, default=False, help="Do not call actual AWS API"
+)
 @click.pass_context
-def cli(ctx):
+def cli(ctx, dry_run):
     ctx.ensure_object(dict)
-    ctx.obj["boto_client"] = BotoClient("ecs")
+    ctx.obj["dry_run"] = dry_run
+    ctx.obj["boto_client"] = BotoClient("ecs", dry_run=dry_run)
 
 
 @cli.group(name="task-definition")
@@ -62,7 +66,7 @@ def register(
     task_definition_arn = response["taskDefinition"]["taskDefinitionArn"]
     click.echo(f"\t✅ done, task definition arn: {task_definition_arn}.")
 
-    if update_services_in_cluster:
+    if update_services_in_cluster and not ctx.obj["dry_run"]:
         updated_services = {}
 
         for cluster_name in update_services_in_cluster:

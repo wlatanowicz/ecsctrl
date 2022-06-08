@@ -7,7 +7,9 @@ class BotoClient:
     def __init__(self, service, dry_run=False) -> None:
         self.dry_run = dry_run
         self.service = service
-        self.client = boto3.client(service)
+        self.client = None
+        if not dry_run:
+            self.client = boto3.client(service)
 
     def call(self, method, *args, **kwargs):
         if not self.dry_run:
