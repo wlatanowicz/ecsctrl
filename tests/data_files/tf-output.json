@@ -1,0 +1,73 @@
+{
+  "ecs_infra": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "aws_region": "string",
+        "cluster_name": "string",
+        "db_host": "string",
+        "db_user": "string",
+        "django_static_backend_s3_bucket": "string",
+        "domain": "string",
+        "env_name": "string",
+        "execution_role_arn": "string",
+        "project_name": "string",
+        "service_security_groups": [
+          "tuple",
+          [
+            "string",
+            "string"
+          ]
+        ],
+        "ssm_secrets": [
+          "object",
+          {
+            "ssm_postgres_password": "string"
+          }
+        ],
+        "subnets": [
+          "tuple",
+          [
+            "string",
+            "string",
+            "string"
+          ]
+        ],
+        "target_group_arns": [
+          "object",
+          {
+            "web": "string"
+          }
+        ],
+        "task_role_arn": "string"
+      }
+    ],
+    "value": {
+      "aws_region": "eu-west-1",
+      "cluster_name": "ecs-test",
+      "db_host": "test-db.fwgzx4se9shs.eu-west-1.rds.amazonaws.com",
+      "db_user": "postgres",
+      "django_static_backend_s3_bucket": "test-django-static",
+      "domain": "test.example.com",
+      "env_name": "test",
+      "execution_role_arn": "arn:aws:iam::327376576235:role/ecs_task_execution_role",
+      "service_security_groups": [
+        "sg-f962f180b78b1e1ce",
+        "sg-694824e7b602c0b79"
+      ],
+      "ssm_secrets": {
+        "postgres_password": "test-project.POSTGRES_PASSWORD"
+      },
+      "subnets": [
+        "subnet-935d90f551003a326",
+        "subnet-d1be0e0ff5ec21d55",
+        "subnet-280191fd831969f80"
+      ],
+      "target_group_arns": {
+        "web": "arn:aws:elasticloadbalancing:eu-west-1:327376576235:targetgroup/web/74c9f6cd45cab21"
+      },
+      "task_role_arn": "arn:aws:iam::327376576235:role/ecs_task_role"
+    }
+  }
+}

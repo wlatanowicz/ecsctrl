@@ -1,0 +1,37 @@
+{% set tf = ecs_infra.value %}
+serviceName: web
+cluster: {{ tf.cluster_name }}
+tags:
+  ManagedBy: ECSctrl
+  Environment: {{ tf.env_name }}
+  Project: {{ tf.project_name }}
+  Cluster: {{ tf.cluster_name }}
+enableECSManagedTags: true
+propagateTags: TASK_DEFINITION
+desiredCount: 1
+launchType: FARGATE
+loadBalancers:
+  - targetGroupArn: {{ tf.target_group_arns.web }}
+    containerName: web
+    containerPort: 80
+taskDefinition: {{ tf.cluster_name }}-web
+deploymentConfiguration:
+  maximumPercent: 200
+  minimumHealthyPercent: 50
+  deploymentCircuitBreaker:
+    enable: true
+    rollback: false
+schedulingStrategy: REPLICA
+deploymentController:
+  type: ECS
+networkConfiguration:
+  awsvpcConfiguration:
+    assignPublicIp: DISABLED
+    subnets:
+{% for subnet in tf.subnets %}
+      - {{ subnet }}
+{% endfor %}
+    securityGroups:
+{% for sg in tf.service_security_groups %}
+      - {{ sg }}
+{% endfor %}

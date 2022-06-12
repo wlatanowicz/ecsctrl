@@ -1,0 +1,31 @@
+{% set tf = ecs_infra.value %}
+family: {{ tf.cluster_name }}-web
+tags:
+  ManagedBy: ECSctrl
+  Environment: {{ tf.env_name }}
+  Project: {{ tf.project_name }}
+  Cluster: {{ tf.cluster_name }}
+executionRoleArn: {{ tf.execution_role_arn }}
+taskRoleArn: {{ tf.task_role_arn }}
+networkMode: awsvpc
+cpu: 512
+memory: 4096
+containerDefinitions:
+  - name: web
+    image: "nginx:{{ app_version }}"
+    memoryReservation: 512
+    essential: true
+    command:
+      - server
+    logConfiguration:
+      logDriver: awslogs
+      options:
+        awslogs-group: {{ tf.cluster_name }}/web
+        awslogs-region: {{ tf.aws_region }}
+        awslogs-stream-prefix: web
+        awslogs-create-group: "true"
+    portMappings:
+      - containerPort: 80
+        hostPort: 80
+    environment:
+      - DD_SERVICE_NAME=web
