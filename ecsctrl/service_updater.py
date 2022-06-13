@@ -8,7 +8,7 @@ import os
 import click
 
 
-class ServiceUpdater:
+class TaskDefinitionServiceUpdater:
     def __init__(
         self, boto_client, task_definition_arn: str, cluster_name: str
     ) -> None:
@@ -215,3 +215,42 @@ class WaitForUpdate:
             click.echo("\t✅ Service updated successfully.")
 
         return failures, False
+
+
+class ServiceUpdater:
+    CREATE_TO_UPDATE = {
+        "serviceName": "service",
+    }
+
+    ALLOWED_FIELDS = [
+        "cluster",
+        "service",
+        "desiredCount",
+        "taskDefinition",
+        "capacityProviderStrategy",
+        "deploymentConfiguration",
+        "networkConfiguration",
+        "placementConstraints",
+        "placementStrategy",
+        "platformVersion",
+        "forceNewDeployment",
+        "healthCheckGracePeriodSeconds",
+        "enableExecuteCommand",
+        "enableECSManagedTags",
+        "loadBalancers",
+        "propagateTags",
+        "serviceRegistries",
+    ]
+
+    def make_update_payload(self, create_payload):
+        payload_with_translated_fields = {
+            self.CREATE_TO_UPDATE.get(k, k): v for k, v in create_payload.items()
+        }
+
+        update_payload = {
+            k: v
+            for k, v in payload_with_translated_fields.items()
+            if k in self.ALLOWED_FIELDS
+        }
+
+        return update_payload

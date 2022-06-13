@@ -8,7 +8,7 @@ from ecsctrl.loader import VarsLoader
 from .boto_client import BotoClient
 from .yaml_converter import yaml_file_to_dict
 
-from .service_updater import ServiceUpdater, WaitForUpdate
+from .service_updater import TaskDefinitionServiceUpdater, WaitForUpdate, ServiceUpdater
 
 
 def check_var(ctx, param, value):
@@ -45,7 +45,7 @@ def task_definition(ctx):
 @click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
 @click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
 @click.option("--update-services-in-cluster", "-c", multiple=True, type=str, help="Updates all services deployed with this task in a particular cluster")
-@click.option("--wait-for-update", "-w", is_flag=True, help="Waits for services to finish update")
+@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
 @click.pass_context
 # fmt: on
 def register(
@@ -56,7 +56,7 @@ def register(
     var,
     sys_env,
     update_services_in_cluster,
-    wait_for_update,
+    wait,
 ):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
@@ -70,13 +70,13 @@ def register(
         updated_services = {}
 
         for cluster_name in update_services_in_cluster:
-            updater = ServiceUpdater(
+            updater = TaskDefinitionServiceUpdater(
                 ctx.obj["boto_client"], task_definition_arn, cluster_name
             )
             updated_services_in_cluster = updater.update()
             updated_services[cluster_name] = updated_services_in_cluster
 
-        if wait_for_update:
+        if wait:
             waiter = WaitForUpdate(ctx.obj["boto_client"], updated_services)
             waiter.wait_for_all()
 
@@ -94,15 +94,20 @@ def service(ctx):
 @click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
 @click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
 @click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish creation")
 @click.pass_context
 # fmt: on
-def create(ctx, spec_file, env_file, json_file, var, sys_env):
+def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
     click.echo(f"🏸 Creating service {service_name}.")
     ctx.obj["boto_client"].call("create_service", **spec)
     click.echo("\t✅ done.")
+
+    if wait:
+        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter.wait_for_all()
 
 
 # fmt: off
@@ -112,15 +117,60 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env):
 @click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
 @click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
 @click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
 @click.pass_context
 # fmt: on
-def update(ctx, spec_file, env_file, json_file, var, sys_env):
+def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
     click.echo(f"🏸 Updating service {service_name}.")
+    updater = ServiceUpdater()
+    spec = updater.make_update_payload(spec)
     ctx.obj["boto_client"].call("update_service", **spec)
     click.echo("\t✅ done.")
+
+    if wait:
+        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter.wait_for_all()
+
+
+# fmt: off
+@service.command("create-or-update")
+@click.argument("spec-file", type=str)
+@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
+@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
+@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
+@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@click.pass_context
+# fmt: on
+def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+    vars = VarsLoader(env_file, var, json_file, sys_env).load()
+    spec = yaml_file_to_dict(spec_file, vars)
+    service_name = spec.get("serviceName", "N/A")
+
+    response = ctx.obj["boto_client"].call(
+        "describe_services",
+        cluster=spec["cluster"],
+        services=[service_name],
+    )
+    service_exists = len(response["services"]) > 0
+
+    if service_exists:
+        click.echo(f"🏸 Updating service {service_name}.")
+        updater = ServiceUpdater()
+        spec = updater.make_update_payload(spec)
+        ctx.obj["boto_client"].call("update_service", **spec)
+        click.echo("\t✅ done.")
+    else:
+        click.echo(f"🏸 Creating service {service_name}.")
+        ctx.obj["boto_client"].call("create_service", **spec)
+        click.echo("\t✅ done.")
+
+    if wait:
+        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter.wait_for_all()
 
 
 @cli.group(name="secrets")

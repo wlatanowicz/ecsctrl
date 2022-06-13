@@ -1,4 +1,5 @@
 from click.testing import CliRunner
+import pytest
 from ecsctrl.cli import cli
 from unittest import mock
 
@@ -6,31 +7,24 @@ from tests.data_files import get_file_path
 
 
 @mock.patch("boto3.client")
-def test_create(boto_mock):
+def test_update(boto_mock):
     mocked_api_response = {}
     client_mock = mock.Mock()
-    client_mock.create_service.return_value = mocked_api_response
+    client_mock.update_service.return_value = mocked_api_response
     boto_mock.return_value = client_mock
 
     runner = CliRunner()
-    params = ["service", "create"]
+    params = ["service", "update"]
     params += ["-j", get_file_path("tf-output.json")]
     params += [get_file_path("service.yaml")]
     result = runner.invoke(cli, params, catch_exceptions=False)
 
     expected_api_params = {
-        "serviceName": "web",
+        "service": "web",
         "cluster": "ecs-test",
-        "tags": [
-            {"key": "ManagedBy", "value": "ECSctrl"},
-            {"key": "Environment", "value": "test"},
-            {"key": "Project", "value": None},
-            {"key": "Cluster", "value": "ecs-test"},
-        ],
         "enableECSManagedTags": True,
         "propagateTags": "TASK_DEFINITION",
         "desiredCount": 1,
-        "launchType": "FARGATE",
         "loadBalancers": [
             {
                 "targetGroupArn": "arn:aws:elasticloadbalancing:eu-west-1:327376576235:targetgroup/web/74c9f6cd45cab21",
@@ -44,8 +38,6 @@ def test_create(boto_mock):
             "minimumHealthyPercent": 50,
             "deploymentCircuitBreaker": {"enable": True, "rollback": False},
         },
-        "schedulingStrategy": "REPLICA",
-        "deploymentController": {"type": "ECS"},
         "networkConfiguration": {
             "awsvpcConfiguration": {
                 "assignPublicIp": "DISABLED",
@@ -59,7 +51,7 @@ def test_create(boto_mock):
         },
     }
 
-    print(client_mock.create_service.call_args.kwargs)
+    print(client_mock.update_service.call_args.kwargs)
 
     assert result.exit_code == 0
-    client_mock.create_service.assert_called_once_with(**expected_api_params)
+    client_mock.update_service.assert_called_once_with(**expected_api_params)
