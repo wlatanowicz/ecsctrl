@@ -1,6 +1,9 @@
 ECSctrl - ECS deployment for humans
 ===
 
+[![tests](https://github.com/wlatanowicz/ecsctrl/actions/workflows/tests.yml/badge.svg)](https://github.com/wlatanowicz/ecsctrl/actions/workflows/tests.yml)
+[![pypi](https://img.shields.io/pypi/v/ecsctrl)](https://pypi.org/project/ecsctrl/)
+
 
 ECSctrl allows you to interact w ECS task definition, service and SSM parameter store APIs with simple, easy to maintain template-driven ymls. It works by generating yml resource description from a template and passing it directly to boto3 function as parameters. You can reference boto3 [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ecs.html) for information on expected data structure.
 
