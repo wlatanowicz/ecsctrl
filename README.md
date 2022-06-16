@@ -1,6 +1,9 @@
 ECSctrl - ECS deployment for humans
 ===
 
+[![tests](https://github.com/wlatanowicz/ecsctrl/actions/workflows/tests.yml/badge.svg)](https://github.com/wlatanowicz/ecsctrl/actions/workflows/tests.yml)
+[![pypi](https://img.shields.io/pypi/v/ecsctrl)](https://pypi.org/project/ecsctrl/)
+
 
 ECSctrl allows you to interact w ECS task definition, service and SSM parameter store APIs with simple, easy to maintain template-driven ymls. It works by generating yml resource description from a template and passing it directly to boto3 function as parameters. You can reference boto3 [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ecs.html) for information on expected data structure.
 
@@ -85,7 +88,7 @@ ecsctrl task-definition register -e production.env task-definition.yaml
 
 Additionally you can use following options:
 - `-c <cluster-name>` / `--update-services-in-cluster=<cluster-name>` - updates all existing services which uses previous version of task definition (task definition family must match) in given cluster. Can be added multiple times for multiple clusters
-- `-w` / `--wait-for-update` - wait for update of services to finish. Command will fail if at least one of services will fail to update.
+- `-w` / `--wait` - wait for update of services to finish. Command will fail if at least one of services will fail to update.
 
 Create new ECS service
 ---
