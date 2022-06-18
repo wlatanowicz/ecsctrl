@@ -62,8 +62,6 @@ def test_create(boto_mock):
         },
     }
 
-    print(client_mock.create_service.call_args.kwargs)
-
     assert result.exit_code == 0
     client_mock.describe_services.assert_called_once_with(
         cluster="ecs-test",

@@ -34,7 +34,7 @@ def cli(ctx, dry_run):
 @cli.group(name="task-definition")
 @click.pass_context
 def task_definition(ctx):
-    pass
+    """Task definition management."""
 
 
 # fmt: off
@@ -58,6 +58,8 @@ def register(
     update_services_in_cluster,
     wait,
 ):
+    """Register task definition."""
+
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     task_family = spec.get("family", "N/A")
@@ -84,7 +86,7 @@ def register(
 @cli.group(name="service")
 @click.pass_context
 def service(ctx):
-    pass
+    """Service management."""
 
 
 # fmt: off
@@ -98,6 +100,8 @@ def service(ctx):
 @click.pass_context
 # fmt: on
 def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+    """Create a new service."""
+
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
@@ -121,6 +125,8 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 @click.pass_context
 # fmt: on
 def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+    """Update an existing service."""
+
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
@@ -146,6 +152,8 @@ def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 @click.pass_context
 # fmt: on
 def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+    """Check if service exists and update it or create a new one."""
+
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     service_name = spec.get("serviceName", "N/A")
@@ -176,7 +184,7 @@ def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 @cli.group(name="secrets")
 @click.pass_context
 def secrets(ctx):
-    pass
+    """Secrets management."""
 
 
 # fmt: off
@@ -189,6 +197,7 @@ def secrets(ctx):
 @click.pass_context
 # fmt: on
 def store(ctx, spec_file, env_file, json_file, var, sys_env):
+    """Store secret is Parameter Store."""
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
     ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
@@ -202,3 +211,63 @@ def store(ctx, spec_file, env_file, json_file, var, sys_env):
         click.echo(f"🔑 Storing secret {secret_name}.")
         response = ssm.call("put_parameter", **ssm_params)
         click.echo(f"\t✅ done, parameter version: {response['Version']}")
+
+
+# fmt: off
+@service.command()
+@click.argument("task-definition-spec-file", type=str)
+@click.argument("service-spec-file", type=str)
+@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
+@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
+@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
+@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@click.pass_context
+# fmt: on
+def deploy(
+    ctx,
+    task_definition_spec_file,
+    service_spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+    wait,
+):
+    """All-in-one - register task definition and create or update service."""
+
+    vars = VarsLoader(env_file, var, json_file, sys_env).load()
+    task_definition_spec = yaml_file_to_dict(task_definition_spec_file, vars)
+    task_family = task_definition_spec.get("family", "N/A")
+    click.echo(f"🗂 Registering task definition {task_family}.")
+    response = ctx.obj["boto_client"].call(
+        "register_task_definition", **task_definition_spec
+    )
+    task_definition_arn = response["taskDefinition"]["taskDefinitionArn"]
+    click.echo(f"\t✅ done, task definition arn: {task_definition_arn}.")
+
+    service_spec = yaml_file_to_dict(service_spec_file, vars)
+    service_name = service_spec.get("serviceName", "N/A")
+    service_spec["taskDefinition"] = task_definition_arn
+
+    response = ctx.obj["boto_client"].call(
+        "describe_services",
+        cluster=service_spec["cluster"],
+        services=[service_name],
+    )
+    service_exists = len(response["services"]) > 0
+
+    if service_exists:
+        click.echo(f"🏸 Updating service {service_name}.")
+        updater = ServiceUpdater()
+        service_spec = updater.make_update_payload(service_spec)
+        ctx.obj["boto_client"].call("update_service", **service_spec)
+        click.echo("\t✅ done.")
+    else:
+        click.echo(f"🏸 Creating service {service_name}.")
+        ctx.obj["boto_client"].call("create_service", **service_spec)
+        click.echo("\t✅ done.")
+
+    if wait:
+        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter.wait_for_all()

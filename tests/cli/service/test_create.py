@@ -59,7 +59,5 @@ def test_create(boto_mock):
         },
     }
 
-    print(client_mock.create_service.call_args.kwargs)
-
     assert result.exit_code == 0
     client_mock.create_service.assert_called_once_with(**expected_api_params)
