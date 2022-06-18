@@ -7,7 +7,7 @@ from tests.data_files import get_file_path
 
 @mock.patch("boto3.client")
 def test_create(boto_mock):
-    mocked_api_response = {}
+    mocked_api_response = {"service": {"serviceArn": "arn"}}
     client_mock = mock.Mock()
     client_mock.create_service.return_value = mocked_api_response
     boto_mock.return_value = client_mock

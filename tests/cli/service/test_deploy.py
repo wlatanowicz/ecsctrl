@@ -13,7 +13,7 @@ def test_create(boto_mock):
         }
     }
     mocked_describe_api_response = {"services": []}
-    mocked_create_api_response = {}
+    mocked_create_api_response = {"service": {"serviceArn": "arn"}}
 
     client_mock = mock.Mock()
     client_mock.register_task_definition.return_value = mocked_register_api_response
@@ -126,7 +126,7 @@ def test_update(boto_mock):
         }
     }
     mocked_describe_api_response = {"services": [{"serviceName": "web"}]}
-    mocked_update_api_response = {}
+    mocked_update_api_response = {"service": {"serviceArn": "arn"}}
 
     client_mock = mock.Mock()
     client_mock.register_task_definition.return_value = mocked_register_api_response

@@ -104,13 +104,18 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
-    service_name = spec.get("serviceName", "N/A")
+    service_name = spec.get("serviceName")
+    cluster_name = spec.get("cluster")
     click.echo(f"🏸 Creating service {service_name}.")
-    ctx.obj["boto_client"].call("create_service", **spec)
+    response = ctx.obj["boto_client"].call("create_service", **spec)
+    service_arn = response["service"]["serviceArn"]
     click.echo("\t✅ done.")
 
     if wait:
-        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter = WaitForUpdate(
+            ctx.obj["boto_client"],
+            {cluster_name: [(service_arn, service_name)]},
+        )
         waiter.wait_for_all()
 
 
@@ -129,15 +134,20 @@ def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
-    service_name = spec.get("serviceName", "N/A")
+    service_name = spec.get("serviceName")
+    cluster_name = spec.get("cluster")
     click.echo(f"🏸 Updating service {service_name}.")
     updater = ServiceUpdater()
     spec = updater.make_update_payload(spec)
-    ctx.obj["boto_client"].call("update_service", **spec)
+    response = ctx.obj["boto_client"].call("update_service", **spec)
+    service_arn = response["service"]["serviceArn"]
     click.echo("\t✅ done.")
 
     if wait:
-        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter = WaitForUpdate(
+            ctx.obj["boto_client"],
+            {cluster_name: [(service_arn, service_name)]},
+        )
         waiter.wait_for_all()
 
 
@@ -156,7 +166,8 @@ def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
-    service_name = spec.get("serviceName", "N/A")
+    service_name = spec.get("serviceName")
+    cluster_name = spec.get("cluster")
 
     response = ctx.obj["boto_client"].call(
         "describe_services",
@@ -169,15 +180,19 @@ def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
         click.echo(f"🏸 Updating service {service_name}.")
         updater = ServiceUpdater()
         spec = updater.make_update_payload(spec)
-        ctx.obj["boto_client"].call("update_service", **spec)
+        response = ctx.obj["boto_client"].call("update_service", **spec)
         click.echo("\t✅ done.")
     else:
         click.echo(f"🏸 Creating service {service_name}.")
-        ctx.obj["boto_client"].call("create_service", **spec)
+        response = ctx.obj["boto_client"].call("create_service", **spec)
         click.echo("\t✅ done.")
+    service_arn = response["service"]["serviceArn"]
 
     if wait:
-        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter = WaitForUpdate(
+            ctx.obj["boto_client"],
+            {cluster_name: [(service_arn, service_name)]},
+        )
         waiter.wait_for_all()
 
 
@@ -247,7 +262,8 @@ def deploy(
     click.echo(f"\t✅ done, task definition arn: {task_definition_arn}.")
 
     service_spec = yaml_file_to_dict(service_spec_file, vars)
-    service_name = service_spec.get("serviceName", "N/A")
+    service_name = service_spec.get("serviceName")
+    cluster_name = service_spec.get("cluster")
     service_spec["taskDefinition"] = task_definition_arn
 
     response = ctx.obj["boto_client"].call(
@@ -261,13 +277,17 @@ def deploy(
         click.echo(f"🏸 Updating service {service_name}.")
         updater = ServiceUpdater()
         service_spec = updater.make_update_payload(service_spec)
-        ctx.obj["boto_client"].call("update_service", **service_spec)
+        response = ctx.obj["boto_client"].call("update_service", **service_spec)
         click.echo("\t✅ done.")
     else:
         click.echo(f"🏸 Creating service {service_name}.")
-        ctx.obj["boto_client"].call("create_service", **service_spec)
+        response = ctx.obj["boto_client"].call("create_service", **service_spec)
         click.echo("\t✅ done.")
+    service_arn = response["service"]["serviceArn"]
 
     if wait:
-        waiter = WaitForUpdate(ctx.obj["boto_client"], [service_name])
+        waiter = WaitForUpdate(
+            ctx.obj["boto_client"],
+            {cluster_name: [(service_arn, service_name)]},
+        )
         waiter.wait_for_all()

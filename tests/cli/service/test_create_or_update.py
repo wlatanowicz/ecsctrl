@@ -7,7 +7,7 @@ from tests.data_files import get_file_path
 
 @mock.patch("boto3.client")
 def test_create(boto_mock):
-    mocked_api_response = {}
+    mocked_api_response = {"service": {"serviceArn": "arn"}}
     mocked_describe_api_response = {"services": []}
 
     client_mock = mock.Mock()
@@ -75,8 +75,8 @@ def test_create(boto_mock):
 
 @mock.patch("boto3.client")
 def test_update(boto_mock):
+    mocked_api_response = {"service": {"serviceArn": "arn"}}
     mocked_describe_api_response = {"services": [{"serviceName": "web"}]}
-    mocked_api_response = {}
 
     client_mock = mock.Mock()
     client_mock.describe_services.return_value = mocked_describe_api_response
