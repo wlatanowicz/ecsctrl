@@ -57,7 +57,5 @@ def test_register(boto_mock):
         ],
     }
 
-    # print(client_mock.register_task_definition.call_args.kwargs)
-
     assert result.exit_code == 0
     client_mock.register_task_definition.assert_called_once_with(**expected_api_params)
