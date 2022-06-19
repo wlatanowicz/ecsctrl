@@ -86,9 +86,9 @@ containerDefinitions:
 ecsctrl task-definition register -e production.env task-definition.yaml
 ```
 
-Additionally you can use following options:
+Additional options:
 - `-c <cluster-name>` / `--update-services-in-cluster=<cluster-name>` - updates all existing services which uses previous version of task definition (task definition family must match) in given cluster. Can be added multiple times for multiple clusters
-- `-w` / `--wait` - wait for update of services to finish. Command will fail if at least one of services will fail to update.
+- `-w` / `--wait` - wait for update of all services to finish. Command will fail if at least one of services will fail to update.
 
 Create new ECS service
 ---
@@ -135,10 +135,48 @@ networkConfiguration:
 ecsctrl service create -e production.env service.yaml
 ```
 
+Additional options:
+- `-w` / `--wait` - wait for service to be fully functional. Command will fail if service fails to start.
+
+
 Update existing ECS service
 ---
 
-Sorry, not implemented yet.
+Update command takes the same service definition file as create command. Payload is converted to match AWS API's requirements for service update - some field are renamed and some are removed.
+
+```bash
+ecsctrl service update -e production.env service.yaml
+```
+
+Additional options:
+- `-w` / `--wait` - wait for service to be fully functional. Command will fail if service fails to start.
+
+
+Create or update ECS service
+---
+
+Updates a service or creates a new one if not exists.
+
+```bash
+ecsctrl service create-or-update -e production.env service.yaml
+```
+
+Additional options:
+- `-w` / `--wait` - wait for service to be fully functional. Command will fail if service fails to start or update.
+
+
+Single command deployment
+---
+
+All-in-one - registers task definition and performs create-or-update of a service. Recommended to use in CIs. Takes both: task definition and service yaml file specs.
+
+```bash
+ecsctrl service deploy -e production.env task-definition.yaml service.yaml
+```
+
+Additional options:
+- `-w` / `--wait` - wait for service to be fully functional. Command will fail if service fails to start or update.
+
 
 Store secrets in SSM parameter store.
 ---
