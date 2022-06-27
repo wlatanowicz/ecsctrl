@@ -23,7 +23,7 @@ class EnvFileLoader:
         lines = [line.strip() for line in lines]
         lines = [line for line in lines if not line.startswith("#")]
         lines = [line for line in lines if "=" in line]
-        key_values = [line.split("=", maxsplit=2) for line in lines]
+        key_values = [line.split("=", maxsplit=1) for line in lines]
         return {k.strip(): v.strip() for k, v in key_values}
 
 
@@ -32,7 +32,7 @@ class EnvVarsParser:
         self.env_vars = env_vars
 
     def parse(self) -> Dict[str, str]:
-        vars = [v.split("=", maxsplit=2) for v in self.env_vars]
+        vars = [v.split("=", maxsplit=1) for v in self.env_vars]
         return {v[0]: v[1] for v in vars}
 
 

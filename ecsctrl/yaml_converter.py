@@ -16,7 +16,7 @@ def expand_key_value_list(key_field: str, value_field: str, obj: dict):
         result = []
         for i in obj:
             if isinstance(i, str) and "=" in i:
-                k, v = i.split("=", maxsplit=2)
+                k, v = i.split("=", maxsplit=1)
                 result.append({key_field: k, value_field: v})
 
             elif isinstance(i, dict):
