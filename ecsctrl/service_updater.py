@@ -66,6 +66,9 @@ class WaitForUpdate:
     def __init__(self, boto_client, services_in_clusters: Dict[str, str]) -> None:
         self.boto_client = boto_client
         self.services_in_clusters = services_in_clusters
+        self.timeout = 600
+        self.wait_time = 60
+        self.min_task_age = 60
 
     def describe_all_services(self):
         described_services = []
@@ -86,9 +89,7 @@ class WaitForUpdate:
     def wait_for_all(self):
         total_failures = 1
         total_critical = False
-        timeout = 600
-        wait_time = 60
-        deadline = time() + timeout
+        deadline = time() + self.timeout
         start_time = time()
 
         while total_failures and not total_critical:
@@ -120,14 +121,14 @@ class WaitForUpdate:
                     pause_time = time()
                     if not os.environ.get("CI"):
                         animation = "🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛"
-                        for i in range(wait_time * 10):
+                        for i in range(self.wait_time * 10):
                             sys.stdout.write("\r" + animation[i % len(animation)])
                             sys.stdout.flush()
                             sleep(0.1)
                         sys.stdout.write("\r")
                         sys.stdout.flush()
                     else:
-                        sleep(wait_time)
+                        sleep(self.wait_time)
 
                     time_passed = math.floor(time() - start_time)
                     resumed_after = math.floor(time() - pause_time)
@@ -145,8 +146,6 @@ class WaitForUpdate:
         service_task_desired_count = service_description["desiredCount"]
         service_task_running_count = service_description["runningCount"]
         service_task_pending_count = service_description["pendingCount"]
-
-        min_task_age = 60  # @TODO get from cli arguments
 
         deployments = service_description["deployments"]
         primary_deployment = [d for d in deployments if d["status"] == "PRIMARY"][0]
@@ -186,11 +185,11 @@ class WaitForUpdate:
             )
             task_task_definition = task["taskDefinitionArn"]
 
-            if task_age >= min_task_age:
+            if task_age >= self.min_task_age:
                 click.echo(f"\t😀 Task {task_arn} age is OK")
             else:
                 click.echo(
-                    f"\t😱 Task {task_arn} is to young ({task_age}s, {min_task_age}s minimum)"
+                    f"\t😱 Task {task_arn} is to young ({task_age}s, {self.min_task_age}s minimum)"
                 )
                 failures += 1
 
