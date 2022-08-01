@@ -20,11 +20,11 @@ def check_var(ctx, param, value):
     return value
 
 
+# fmt: off
 @click.group()
-@click.option(
-    "--dry-run", is_flag=True, default=False, help="Do not call actual AWS API"
-)
+@click.option("--dry-run", is_flag=True, default=False, help="Do not call actual AWS API")
 @click.pass_context
+# fmt: on
 def cli(ctx, dry_run):
     ctx.ensure_object(dict)
     ctx.obj["dry_run"] = dry_run
@@ -37,15 +37,28 @@ def task_definition(ctx):
     """Task definition management."""
 
 
+def common_options(fn):
+    fn = click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")(fn)
+    fn = click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")(fn)
+    fn = click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")(fn)
+    fn = click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")(fn)
+    return fn
+
+
+def wait_options(wait_for, many=False):
+    def wrapper(fn):
+        s = "s" if many else ""
+        fn = click.option("--wait", "-w", is_flag=True, help=f"Waits for service{s} to finish {wait_for}")(fn)
+        return fn
+    return wrapper
+
+
 # fmt: off
 @task_definition.command()
 @click.argument("spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@common_options
 @click.option("--update-services-in-cluster", "-c", multiple=True, type=str, help="Updates all services deployed with this task in a particular cluster")
-@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@wait_options(wait_for="update", many=True)
 @click.pass_context
 # fmt: on
 def register(
@@ -92,11 +105,8 @@ def service(ctx):
 # fmt: off
 @service.command()
 @click.argument("spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
-@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish creation")
+@common_options
+@wait_options(wait_for="creation")
 @click.pass_context
 # fmt: on
 def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
@@ -122,11 +132,8 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 # fmt: off
 @service.command()
 @click.argument("spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
-@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@common_options
+@wait_options(wait_for="update")
 @click.pass_context
 # fmt: on
 def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
@@ -154,11 +161,8 @@ def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
 # fmt: off
 @service.command("create-or-update")
 @click.argument("spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
-@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@common_options
+@wait_options(wait_for="update")
 @click.pass_context
 # fmt: on
 def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
@@ -205,10 +209,7 @@ def secrets(ctx):
 # fmt: off
 @secrets.command()
 @click.argument("spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
+@common_options
 @click.pass_context
 # fmt: on
 def store(ctx, spec_file, env_file, json_file, var, sys_env):
@@ -232,11 +233,8 @@ def store(ctx, spec_file, env_file, json_file, var, sys_env):
 @service.command()
 @click.argument("task-definition-spec-file", type=str)
 @click.argument("service-spec-file", type=str)
-@click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")
-@click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")
-@click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")
-@click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")
-@click.option("--wait", "-w", is_flag=True, help="Waits for services to finish update")
+@common_options
+@wait_options(wait_for="update")
 @click.pass_context
 # fmt: on
 def deploy(
