@@ -1,14 +1,14 @@
-from email.policy import default
 import os
-import click
 import re
+from email.policy import default
+
+import click
 
 from ecsctrl.loader import VarsLoader
 
 from .boto_client import BotoClient
+from .service_updater import ServiceUpdater, TaskDefinitionServiceUpdater, WaitForUpdate
 from .yaml_converter import yaml_file_to_dict
-
-from .service_updater import TaskDefinitionServiceUpdater, WaitForUpdate, ServiceUpdater
 
 
 def check_var(ctx, param, value):
@@ -38,18 +38,23 @@ def task_definition(ctx):
 
 
 def common_options(fn):
+    # fmt: off
     fn = click.option("--env-file", "-e", multiple=True, type=str, help="Path to env-style file with variables")(fn)
     fn = click.option("--json-file", "-j", multiple=True, type=str, help="Path to json file with variable")(fn)
     fn = click.option("--var", "-v", multiple=True, type=str, callback=check_var, help="Single variable in format name=value")(fn)
     fn = click.option("--sys-env/--no-sys-env", is_flag=True, default=False, help="Uses system env as a source for template variables")(fn)
+    # fmt: on
     return fn
 
 
 def wait_options(wait_for, many=False):
     def wrapper(fn):
         s = "s" if many else ""
+        # fmt: off
         fn = click.option("--wait", "-w", is_flag=True, help=f"Waits for service{s} to finish {wait_for}")(fn)
+        # fmt: on
         return fn
+
     return wrapper
 
 

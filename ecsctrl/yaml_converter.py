@@ -1,8 +1,9 @@
+from functools import partial
 from typing import Dict, List
+
 import yaml
 
 from .loader import SpecFileLoader
-from functools import partial
 
 TASK_DEFINITION = "taskDefinition"
 SERVICE = "service"

@@ -1,10 +1,11 @@
-import re
-from time import sleep, time
-from typing import Dict, List
-from datetime import datetime, timezone
-import sys
 import math
 import os
+import re
+import sys
+from datetime import datetime, timezone
+from time import sleep, time
+from typing import Dict, List
+
 import click
 
 
