@@ -52,6 +52,7 @@ def wait_options(wait_for, many=False):
         s = "s" if many else ""
         # fmt: off
         fn = click.option("--wait", "-w", is_flag=True, help=f"Waits for service{s} to finish {wait_for}")(fn)
+        fn = click.option("--wait-timeout", default=600, type=int, help=f"Custom timeout in seconds (defaults to 600s)")(fn)
         # fmt: on
         return fn
 
@@ -75,6 +76,7 @@ def register(
     sys_env,
     update_services_in_cluster,
     wait,
+    wait_timeout,
 ):
     """Register task definition."""
 
@@ -98,6 +100,7 @@ def register(
 
         if wait:
             waiter = WaitForUpdate(ctx.obj["boto_client"], updated_services)
+            waiter.timeout = wait_timeout
             waiter.wait_for_all()
 
 
@@ -107,14 +110,21 @@ def service(ctx):
     """Service management."""
 
 
-# fmt: off
 @service.command()
 @click.argument("spec-file", type=str)
 @common_options
 @wait_options(wait_for="creation")
 @click.pass_context
-# fmt: on
-def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+def create(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+    wait,
+    wait_timeout,
+):
     """Create a new service."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
@@ -131,17 +141,25 @@ def create(ctx, spec_file, env_file, json_file, var, sys_env, wait):
             ctx.obj["boto_client"],
             {cluster_name: [(service_arn, service_name)]},
         )
+        waiter.timeout = wait_timeout
         waiter.wait_for_all()
 
 
-# fmt: off
 @service.command()
 @click.argument("spec-file", type=str)
 @common_options
 @wait_options(wait_for="update")
 @click.pass_context
-# fmt: on
-def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+def update(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+    wait,
+    wait_timeout,
+):
     """Update an existing service."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
@@ -160,17 +178,25 @@ def update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
             ctx.obj["boto_client"],
             {cluster_name: [(service_arn, service_name)]},
         )
+        waiter.timeout = wait_timeout
         waiter.wait_for_all()
 
 
-# fmt: off
 @service.command("create-or-update")
 @click.argument("spec-file", type=str)
 @common_options
 @wait_options(wait_for="update")
 @click.pass_context
-# fmt: on
-def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
+def create_or_update(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+    wait,
+    wait_timeout,
+):
     """Check if service exists and update it or create a new one."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
@@ -202,6 +228,7 @@ def create_or_update(ctx, spec_file, env_file, json_file, var, sys_env, wait):
             ctx.obj["boto_client"],
             {cluster_name: [(service_arn, service_name)]},
         )
+        waiter.timeout = wait_timeout
         waiter.wait_for_all()
 
 
@@ -211,13 +238,18 @@ def secrets(ctx):
     """Secrets management."""
 
 
-# fmt: off
 @secrets.command()
 @click.argument("spec-file", type=str)
 @common_options
 @click.pass_context
-# fmt: on
-def store(ctx, spec_file, env_file, json_file, var, sys_env):
+def store(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+):
     """Store secret is Parameter Store."""
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars)
@@ -234,14 +266,12 @@ def store(ctx, spec_file, env_file, json_file, var, sys_env):
         click.echo(f"\t✅ done, parameter version: {response['Version']}")
 
 
-# fmt: off
 @service.command()
 @click.argument("task-definition-spec-file", type=str)
 @click.argument("service-spec-file", type=str)
 @common_options
 @wait_options(wait_for="update")
 @click.pass_context
-# fmt: on
 def deploy(
     ctx,
     task_definition_spec_file,
@@ -251,6 +281,7 @@ def deploy(
     var,
     sys_env,
     wait,
+    wait_timeout,
 ):
     """All-in-one - register task definition and create or update service."""
 
@@ -293,4 +324,5 @@ def deploy(
             ctx.obj["boto_client"],
             {cluster_name: [(service_arn, service_name)]},
         )
+        waiter.timeout = wait_timeout
         waiter.wait_for_all()
