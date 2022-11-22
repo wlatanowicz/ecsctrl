@@ -9,6 +9,7 @@ from ecsctrl.loader import VarsLoader
 from .boto_client import BotoClient
 from .service_updater import ServiceUpdater, TaskDefinitionServiceUpdater, WaitForUpdate
 from .yaml_converter import yaml_file_to_dict
+from .secret_checker import SecretChecker
 
 
 def check_var(ctx, param, value):
@@ -58,12 +59,20 @@ def wait_options(wait_for, many=False):
     return wrapper
 
 
+def check_secrets_option(fn):
+    # fmt: off
+    fn = click.option("--check-secrets", is_flag=True, help="Checks if all required secrets exist before registering task definition")(fn)
+    # fmt: on
+    return fn
+
+
 # fmt: off
 @task_definition.command()
 @click.argument("spec-file", type=str)
 @common_options
 @click.option("--update-services-in-cluster", "-c", multiple=True, type=str, help="Updates all services deployed with this task in a particular cluster")
 @wait_options(wait_for="update", many=True)
+@check_secrets_option
 @click.pass_context
 # fmt: on
 def register(
@@ -75,6 +84,7 @@ def register(
     sys_env,
     update_services_in_cluster,
     wait,
+    check_secrets,
 ):
     """Register task definition."""
 
@@ -240,6 +250,7 @@ def store(ctx, spec_file, env_file, json_file, var, sys_env):
 @click.argument("service-spec-file", type=str)
 @common_options
 @wait_options(wait_for="update")
+@check_secrets_option
 @click.pass_context
 # fmt: on
 def deploy(
@@ -251,6 +262,7 @@ def deploy(
     var,
     sys_env,
     wait,
+    check_secrets,
 ):
     """All-in-one - register task definition and create or update service."""
 
