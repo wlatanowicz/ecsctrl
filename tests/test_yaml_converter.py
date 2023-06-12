@@ -1,4 +1,4 @@
-from ecsctrl.yaml_converter import yaml_data_to_dict, TASK_DEFINITION
+from ecsctrl.yaml_converter import TASK_DEFINITION, yaml_data_to_dict
 
 
 def test_yaml_data_to_dict():

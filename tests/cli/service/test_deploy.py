@@ -1,7 +1,8 @@
-from click.testing import CliRunner
-from ecsctrl.cli import cli
 from unittest import mock
 
+from click.testing import CliRunner
+
+from ecsctrl.cli import cli
 from tests.data_files import get_file_path
 
 
