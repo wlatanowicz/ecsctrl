@@ -70,6 +70,9 @@ class DryBotoClient:
         if self.service == "ssm":
             if method == "put_parameter":
                 return {"Version": 123}
+        if self.service == "batch":
+            if method == "register_job_definition":
+                return {"jobDefinitionArn": "N/A"}
         return {}
 
     def _load_service_model(self, service_name, api_version=None):

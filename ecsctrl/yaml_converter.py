@@ -6,7 +6,9 @@ import yaml
 from .loader import SpecFileLoader
 
 TASK_DEFINITION = "taskDefinition"
+JOB_DEFINITION = "jobDefinition"
 SERVICE = "service"
+SECRETS = "secrets"
 
 
 def expand_key_value_list(key_field: str, value_field: str, obj: dict):
@@ -46,9 +48,23 @@ TRANSFORMATIONS = {
         "cpu": str,
         "memory": str,
     },
+    JOB_DEFINITION: {
+        "containerProperties.environment": partial(
+            expand_key_value_list, "name", "value"
+        ),
+        "containerProperties.secrets": partial(
+            expand_key_value_list, "name", "valueFrom"
+        ),
+        "containerProperties.resourceRequirements": partial(
+            expand_key_value_list, "type", "value"
+        ),
+        "containerProperties.resourceRequirements.*.type": lambda v: str(v).upper(),
+        "containerProperties.resourceRequirements.*.value": str,
+    },
     SERVICE: {
         "tags": partial(expand_key_value_list, "key", "value"),
     },
+    SECRETS: {},
 }
 
 
@@ -68,20 +84,21 @@ def _apply_function_to_path(obj: dict, path: str, function: callable):
         obj[next_level] = function(obj[next_level])
 
 
-def yaml_data_to_dict(obj: dict):
-    for path, function in TRANSFORMATIONS[TASK_DEFINITION].items():
+def yaml_data_to_dict(obj: dict, file_type: str):
+    for path, function in TRANSFORMATIONS[file_type].items():
         _apply_function_to_path(obj, path, function)
     return obj
 
 
-def yaml_to_dict(yaml_contents: str):
-    return yaml_data_to_dict(yaml.load(yaml_contents, Loader=yaml.Loader))
+def yaml_to_dict(yaml_contents: str, file_type: str):
+    return yaml_data_to_dict(yaml.load(yaml_contents, Loader=yaml.Loader), file_type)
 
 
 def yaml_file_to_dict(
     file_path: str,
     vars: Dict[str, str],
+    file_type: str,
 ):
     loader = SpecFileLoader(file_path, vars)
     raw_yaml = loader.load()
-    return yaml_to_dict(raw_yaml)
+    return yaml_to_dict(raw_yaml, file_type)
