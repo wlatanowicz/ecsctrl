@@ -8,7 +8,13 @@ from ecsctrl.loader import VarsLoader
 
 from .boto_client import BotoClient
 from .service_updater import ServiceUpdater, TaskDefinitionServiceUpdater, WaitForUpdate
-from .yaml_converter import yaml_file_to_dict
+from .yaml_converter import (
+    JOB_DEFINITION,
+    SECRETS,
+    SERVICE,
+    TASK_DEFINITION,
+    yaml_file_to_dict,
+)
 
 
 def check_var(ctx, param, value):
@@ -81,7 +87,7 @@ def register(
     """Register task definition."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    spec = yaml_file_to_dict(spec_file, vars)
+    spec = yaml_file_to_dict(spec_file, vars, TASK_DEFINITION)
     task_family = spec.get("family", "N/A")
     click.echo(f"🗂 Registering task definition {task_family}.")
     response = ctx.obj["boto_client"].call("register_task_definition", **spec)
@@ -102,6 +108,38 @@ def register(
             waiter = WaitForUpdate(ctx.obj["boto_client"], updated_services)
             waiter.timeout = wait_timeout
             waiter.wait_for_all()
+
+
+@cli.group(name="batch-job-definition")
+@click.pass_context
+def batch_job_definition(ctx):
+    """Batch job definition management."""
+
+
+# fmt: off
+@batch_job_definition.command()
+@click.argument("spec-file", type=str)
+@common_options
+@click.pass_context
+# fmt: on
+def register(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+):
+    """Register AWS Batch job definition."""
+
+    vars = VarsLoader(env_file, var, json_file, sys_env).load()
+    spec = yaml_file_to_dict(spec_file, vars, JOB_DEFINITION)
+    job_definition_name = spec.get("jobDefinitionName", "N/A")
+    click.echo(f"🗂 Registering batch job definition {job_definition_name}.")
+    client = BotoClient("batch", dry_run=ctx.obj["boto_client"].dry_run)
+    response = client.call("register_job_definition", **spec)
+    job_definition_arn = response["jobDefinitionArn"]
+    click.echo(f"\t✅ done, job definition arn: {job_definition_arn}.")
 
 
 @cli.group(name="service")
@@ -128,7 +166,7 @@ def create(
     """Create a new service."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    spec = yaml_file_to_dict(spec_file, vars)
+    spec = yaml_file_to_dict(spec_file, vars, SERVICE)
     service_name = spec.get("serviceName")
     cluster_name = spec.get("cluster")
     click.echo(f"🏸 Creating service {service_name}.")
@@ -163,7 +201,7 @@ def update(
     """Update an existing service."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    spec = yaml_file_to_dict(spec_file, vars)
+    spec = yaml_file_to_dict(spec_file, vars, SERVICE)
     service_name = spec.get("serviceName")
     cluster_name = spec.get("cluster")
     click.echo(f"🏸 Updating service {service_name}.")
@@ -200,7 +238,7 @@ def create_or_update(
     """Check if service exists and update it or create a new one."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    spec = yaml_file_to_dict(spec_file, vars)
+    spec = yaml_file_to_dict(spec_file, vars, SERVICE)
     service_name = spec.get("serviceName")
     cluster_name = spec.get("cluster")
 
@@ -252,7 +290,7 @@ def store(
 ):
     """Store secret is Parameter Store."""
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    spec = yaml_file_to_dict(spec_file, vars)
+    spec = yaml_file_to_dict(spec_file, vars, SECRETS)
     ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
 
     for secret_name, value in spec.items():
@@ -286,7 +324,9 @@ def deploy(
     """All-in-one - register task definition and create or update service."""
 
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
-    task_definition_spec = yaml_file_to_dict(task_definition_spec_file, vars)
+    task_definition_spec = yaml_file_to_dict(
+        task_definition_spec_file, vars, TASK_DEFINITION
+    )
     task_family = task_definition_spec.get("family", "N/A")
     click.echo(f"🗂 Registering task definition {task_family}.")
     response = ctx.obj["boto_client"].call(
@@ -295,7 +335,7 @@ def deploy(
     task_definition_arn = response["taskDefinition"]["taskDefinitionArn"]
     click.echo(f"\t✅ done, task definition arn: {task_definition_arn}.")
 
-    service_spec = yaml_file_to_dict(service_spec_file, vars)
+    service_spec = yaml_file_to_dict(service_spec_file, vars, SERVICE)
     service_name = service_spec.get("serviceName")
     cluster_name = service_spec.get("cluster")
     service_spec["taskDefinition"] = task_definition_arn
