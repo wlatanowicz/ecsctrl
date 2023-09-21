@@ -43,10 +43,14 @@ class TaskDefinitionServiceUpdater:
             )
 
             for service in describe_response["services"]:
+                if service["status"] == "INACTIVE":
+                    continue
+
                 task_definition = service["taskDefinition"]
                 service_task_name = re.findall(r".+\/(.+)\:\d+?", task_definition)
                 if service_task_name == self.task_definition_family:
                     services.append((service["serviceArn"], service["serviceName"]))
+
             if list_response.get("nextToken"):
                 kwargs["nextToken"] = list_response["nextToken"]
             else:

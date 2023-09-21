@@ -126,7 +126,9 @@ def test_update(boto_mock):
             "taskDefinitionArn": "arn:aws:ecs:ap-northeast-1:448965722616:task-definition/web:123"
         }
     }
-    mocked_describe_api_response = {"services": [{"serviceName": "web"}]}
+    mocked_describe_api_response = {
+        "services": [{"serviceName": "web", "status": "ACTIVE"}]
+    }
     mocked_update_api_response = {"service": {"serviceArn": "arn"}}
 
     client_mock = mock.Mock()
