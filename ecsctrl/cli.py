@@ -7,6 +7,8 @@ import click
 from ecsctrl.loader import VarsLoader
 
 from .boto_client import BotoClient
+from .dump import generate_var_lut
+from .dump.secrets import dump_secrets, render_dumped_secrets
 from .service_updater import ServiceUpdater, TaskDefinitionServiceUpdater, WaitForUpdate
 from .yaml_converter import (
     JOB_DEFINITION,
@@ -288,7 +290,7 @@ def store(
     var,
     sys_env,
 ):
-    """Store secret is Parameter Store."""
+    """Store secrets is Parameter Store."""
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     spec = yaml_file_to_dict(spec_file, vars, SECRETS)
     ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
@@ -298,10 +300,31 @@ def store(
             "Name": secret_name,
             "Value": value,
             "Type": "SecureString",
+            "Overwrite": True,
         }
         click.echo(f"🔑 Storing secret {secret_name}.")
         response = ssm.call("put_parameter", **ssm_params)
         click.echo(f"\t✅ done, parameter version: {response['Version']}")
+
+
+@secrets.command()
+@click.argument("spec-file", type=str)
+@common_options
+@click.pass_context
+def dump(
+    ctx,
+    spec_file,
+    env_file,
+    json_file,
+    var,
+    sys_env,
+):
+    """Dump secrets from Parameter Store."""
+    vars = VarsLoader(env_file, var, json_file, sys_env).load()
+    var_lut = generate_var_lut(vars)
+    ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
+    secrets = dump_secrets(ssm)
+    render_dumped_secrets(click, secrets, var_lut, spec_file)
 
 
 @service.command()
