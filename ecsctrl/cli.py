@@ -368,7 +368,10 @@ def deploy(
         cluster=service_spec["cluster"],
         services=[service_name],
     )
-    service_exists = len(response["services"]) > 0
+    existing_services = list(
+        filter(lambda s: s["status"] != "INACTIVE", response["services"])
+    )
+    service_exists = len(existing_services) > 0
 
     if service_exists:
         click.echo(f"🏸 Updating service {service_name}.")
