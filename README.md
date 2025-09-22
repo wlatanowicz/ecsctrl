@@ -192,3 +192,10 @@ Secrets are represented in yaml as SSM name and value pairs. They're uploaded to
 ```bash
 ecsctrl secrets store -e production.env secrets.yaml
 ```
+
+Dump secrets from SSM parameter store. You can optionally filter params by name using regexp.
+---
+
+```bash
+ecsctrl secrets dump -e production.env --filter "db_.*" secrets.yaml
+```
