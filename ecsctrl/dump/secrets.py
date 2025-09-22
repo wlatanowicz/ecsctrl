@@ -1,3 +1,4 @@
+import re
 from . import substitute_with_expressions
 
 
@@ -17,7 +18,7 @@ def list_secrets(ssm):
             yield parameter
 
 
-def dump_secrets(ssm):
+def dump_secrets(ssm, filter=None):
     for parameter in list_secrets(ssm):
         parameter_name = parameter["Name"]
         response = ssm.call(
@@ -26,7 +27,8 @@ def dump_secrets(ssm):
             WithDecryption=True,
         )
 
-        yield parameter_name, response["Parameter"]["Value"]
+        if filter is None or re.match(filter, parameter_name):
+            yield parameter_name, response["Parameter"]["Value"]
 
 
 def render_dumped_secrets(click, secrets, vars_lut, target_file):

@@ -11,10 +11,12 @@ jobs:
     strategy:
       matrix:
         python:
-          - "3.7"
           - "3.8"
           - "3.9"
           - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python }}
@@ -23,7 +25,7 @@ jobs:
         python-version: ${{ matrix.python }}
 
     - name: Cache python packages
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: test-python-packages
       with:

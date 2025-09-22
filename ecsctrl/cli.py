@@ -309,11 +309,18 @@ def store(
 
 @secrets.command()
 @click.argument("spec-file", type=str)
+@click.option(
+    "--filter",
+    type=str,
+    default=None,
+    help="Export only secrets matching given regexp pattern",
+)
 @common_options
 @click.pass_context
 def dump(
     ctx,
     spec_file,
+    filter,
     env_file,
     json_file,
     var,
@@ -323,7 +330,7 @@ def dump(
     vars = VarsLoader(env_file, var, json_file, sys_env).load()
     var_lut = generate_var_lut(vars)
     ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
-    secrets = dump_secrets(ssm)
+    secrets = dump_secrets(ssm, filter)
     render_dumped_secrets(click, secrets, var_lut, spec_file)
 
 
