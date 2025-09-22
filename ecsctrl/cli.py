@@ -309,7 +309,12 @@ def store(
 
 @secrets.command()
 @click.argument("spec-file", type=str)
-@click.option("--filter", type=str, default=None, help="Export only secrets matching given regexp pattern")
+@click.option(
+    "--filter",
+    type=str,
+    default=None,
+    help="Export only secrets matching given regexp pattern",
+)
 @common_options
 @click.pass_context
 def dump(

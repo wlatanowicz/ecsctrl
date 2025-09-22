@@ -1,6 +1,7 @@
 import re
 from . import substitute_with_expressions
 
+
 def list_secrets(ssm):
     should_fetch = True
     next_token = None
