@@ -296,12 +296,20 @@ def store(
     ssm = BotoClient("ssm", dry_run=ctx.obj["boto_client"].dry_run)
 
     for secret_name, value in spec.items():
-        ssm_params = {
-            "Name": secret_name,
-            "Value": value,
-            "Type": "SecureString",
-            "Overwrite": True,
-        }
+        if isinstance(value, str):
+            ssm_params = {
+                "Name": secret_name,
+                "Value": value,
+                "Type": "SecureString",
+                "Overwrite": True,
+            }
+        else:
+            ssm_params = {
+                "Name": secret_name,
+                "Value": value["Value"],
+                "Type": value["Type"],
+                "Overwrite": True,
+            }
         click.echo(f"🔑 Storing secret {secret_name}.")
         response = ssm.call("put_parameter", **ssm_params)
         click.echo(f"\t✅ done, parameter version: {response['Version']}")
