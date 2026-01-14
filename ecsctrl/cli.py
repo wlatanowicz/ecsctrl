@@ -314,6 +314,8 @@ def store(
                 "Value": value["Value"],
                 "Type": value["Type"],
             }
+            if value.get("Description", None):
+                ssm_params["Description"] = value["Description"]
 
         click.echo(f"🔑 Storing secret {secret_name}.")
         response = ssm.call("put_parameter", **ssm_params)
