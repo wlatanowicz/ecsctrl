@@ -1,7 +1,7 @@
 import re
 from . import substitute_with_expressions
 from dataclasses import dataclass
-from typing import Generator, Sequence
+from typing import Generator, Optional, Sequence
 
 
 @dataclass
@@ -9,6 +9,7 @@ class Parameter:
     name: str
     value: str
     type: str
+    description: Optional[str]
 
 
 def list_secrets(ssm):
@@ -41,6 +42,7 @@ def dump_secrets(ssm, filter=None) -> Generator[Parameter, None, None]:
                 name=parameter_name,
                 value=response["Parameter"]["Value"],
                 type=response["Parameter"]["Type"],
+                description=parameter.get("Description", None),
             )
 
 
@@ -57,7 +59,7 @@ def render_dumped_secrets(click, secrets: Sequence[Parameter], vars_lut, target_
 def rended_single_secret(parameter: Parameter, vars_lut):
     name = parameter.name
     key = substitute_with_expressions(name, vars_lut)
-    if parameter.type == "SecureString":
+    if parameter.type == "SecureString" and parameter.description is None:
         secret_text = render_simple_secret(key, parameter)
     else:
         secret_text = render_complex_secret(key, parameter)
@@ -75,6 +77,9 @@ def render_complex_secret(key, parameter):
     secret_text = f"{key}:\n"
     secret_text += f"  Type: {parameter.type}\n"
     secret_text += f"  Value: {value}\n"
+    if parameter.description:
+        description = render_value(parameter.description, 2)
+        secret_text += f"  Description: {description}\n"
     return secret_text
 
 
