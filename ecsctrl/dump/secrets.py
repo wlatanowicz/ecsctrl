@@ -1,4 +1,5 @@
 import re
+from botocore.exceptions import BotoCoreError, ClientError
 from . import substitute_with_expressions
 from dataclasses import dataclass
 from typing import Generator, Optional, Sequence
@@ -28,15 +29,33 @@ def list_secrets(ssm):
             yield parameter
 
 
-def dump_secrets(ssm, filter=None) -> Generator[Parameter, None, None]:
+class SecretFetchError(Exception):
+    def __init__(self, name, cause):
+        super().__init__(f"Failed to fetch {name}: {cause}")
+        self.name = name
+        self.cause = cause
+
+
+def dump_secrets(
+    ssm, filter=None, on_error=None, start_from=None
+) -> Generator[Parameter, None, None]:
     for parameter in list_secrets(ssm):
         parameter_name = parameter["Name"]
+        if start_from is not None and parameter_name < start_from:
+            continue
         if filter is None or re.match(filter, parameter_name):
-            response = ssm.call(
-                "get_parameter",
-                Name=parameter_name,
-                WithDecryption=True,
-            )
+            try:
+                response = ssm.call(
+                    "get_parameter",
+                    Name=parameter_name,
+                    WithDecryption=True,
+                )
+            except (BotoCoreError, ClientError) as e:
+                error = SecretFetchError(parameter_name, e)
+                if on_error is None:
+                    raise error from e
+                on_error(error)
+                continue
 
             yield Parameter(
                 name=parameter_name,
@@ -46,20 +65,30 @@ def dump_secrets(ssm, filter=None) -> Generator[Parameter, None, None]:
             )
 
 
-def render_dumped_secrets(click, secrets: Sequence[Parameter], vars_lut, target_file):
-    with open(target_file, "w") as f:
+def render_dumped_secrets(
+    click, secrets: Sequence[Parameter], vars_lut, target_file, simple=False
+):
+    f = None
+    try:
         for parameter in secrets:
-            key, secret_text = rended_single_secret(parameter, vars_lut)
-            f.write(f"# Dumped from `{parameter.name}`:\n")
-            f.write(secret_text)
-            f.write(f"\n")
+            key, secret_text = rended_single_secret(parameter, vars_lut, simple)
+            if f is None:
+                f = open(target_file, "w")
+            f.write(f"# Dumped from `{parameter.name}`:\n{secret_text}\n")
+            f.flush()
             click.echo(f"🔑 Dumped secret {parameter.name} as {key}.")
 
+        if f is None:
+            open(target_file, "w").close()
+    finally:
+        if f is not None:
+            f.close()
 
-def rended_single_secret(parameter: Parameter, vars_lut):
+
+def rended_single_secret(parameter: Parameter, vars_lut, simple=False):
     name = parameter.name
     key = substitute_with_expressions(name, vars_lut)
-    if parameter.type == "SecureString" and parameter.description is None:
+    if simple or (parameter.type == "SecureString" and parameter.description is None):
         secret_text = render_simple_secret(key, parameter)
     else:
         secret_text = render_complex_secret(key, parameter)
